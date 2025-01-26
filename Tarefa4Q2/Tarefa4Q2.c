@@ -4,31 +4,27 @@
 #include "hardware/gpio.h"
 
 // Configuração dos pinos
-
-//const uint RED_LED_PIN = 11;
-const uint32_t BLUE_LED_PIN= 12; 
+const uint32_t BLUE_LED_PIN = 12; 
 #define BUTTON_A_PIN  5   // Botão A 
 #define BUTTON_B_PIN  6   // Botão B 
 
 // Variáveis globais 
 static volatile uint32_t pressA_count = 0;
-static volatile uint32_t pressB_count = 0;
 static volatile bool led_A_blinking_mode = false;
-static volatile bool led_B_blinking_mode = false; 
 static volatile bool buttonA_was_pressed = false; 
 static volatile bool buttonB_was_pressed = false; 
+static volatile bool change_to_1hz = false; // Indica se deve mudar a frequência para 1Hz
 
 // Função de callback para o timer repetitivo
-// Faz a varredura do botão e atualiza o contador de pressões
 bool timer_callback_button_check(repeating_timer_t *rt) {
     // Lê o estado do pino do botão
     bool buttonA_state = gpio_get(BUTTON_A_PIN);
     bool buttonB_state = gpio_get(BUTTON_B_PIN);
 
-    // Se o hardware fechar GND ao apertar, então '0' = pressionado
-    if(!buttonA_state) {
+    // '0' = pressionado
+    if (!buttonA_state) {
         // Se estava solto e agora está pressionado, incrementa
-        if(!buttonA_was_pressed) {
+        if (!buttonA_was_pressed) {
             buttonA_was_pressed = true;
             pressA_count++;
             printf("Botão A pressionado! Contagem = %d\n", pressA_count);
@@ -39,46 +35,59 @@ bool timer_callback_button_check(repeating_timer_t *rt) {
     }
 
     // Se chegou a 5 pressões e ainda não está piscando, inicia o modo de piscar
-    if(pressA_count >= 5 && !led_A_blinking_mode) {
+    if (pressA_count >= 5 && !led_A_blinking_mode) {
         led_A_blinking_mode = true;
-        pressA_count = 0;   // zera contagem caso deseje reiniciar depois
+        change_to_1hz = false; // Reseta a frequência para 10Hz inicialmente
+        pressA_count = 0;      // Zera contagem caso deseje reiniciar depois
     }
 
-    if(!buttonB_state) {
-        // Se estava solto e agora está pressionado, incrementamos
-        if(!buttonB_was_pressed) {
+    if (!buttonB_state) {
+        // Se estava solto e agora está pressionado
+        if (!buttonB_was_pressed) {
             buttonB_was_pressed = true;
-            led_B_blinking_mode = true;
-            printf("Botão B pressionado! Led piscando a 1Hz por 10s\n");
+            if (led_A_blinking_mode) {
+                change_to_1hz = true; // Solicita a mudança para 1Hz
+                printf("Botão B pressionado! Mudando frequência para 1Hz.\n");
+            }
         }
     } else {
         // Se o botão não está pressionado, reseta flag interna
         buttonB_was_pressed = false;
     }
 
-    return true; // para continuar chamando o timer
+    return true; // Para continuar chamando o timer
 }
 
-// Função para piscar o LED por 10 segundos a 10Hz (bloco "sincronamente" no loop)
-void blink_led_10s_10hz(void) {
-    // Precisamos de 10 segundos piscando a 10Hz -> 100 toggles
-    // Frequência de 10Hz = período de 100 ms
-    const uint32_t total_toggles = 100;
-    for(uint32_t i = 0; i < total_toggles; i++) {
-        gpio_xor_mask(1u << BLUE_LED_PIN);  // Toggle do LED
-        sleep_ms(100);                 // período de 100 ms (10Hz)
-    }
-}
+// Função para piscar o LED com mudança de frequência
+void dynamic_blink_led_10s(void) {
+    const uint32_t total_time_ms = 10000; // 10 segundos
+    uint32_t elapsed_time = 0;
+    uint32_t period = 100; // Começa com 10Hz (100ms)
+    uint32_t current_second = 0;
 
-// Função para piscar o LED por 10 segundos a 1HZ (bloco "sincronamente" no loop)
-void blink_led_10s_1hz(void) {
-    // Precisamos de 10 segundos piscando a 1Hz -> 10 toggles
-    // Frequência de 1Hz = período de 1000 ms
-    const uint32_t total_toggles = 10;
-    for(uint32_t i = 0; i < total_toggles; i++) {
-        gpio_xor_mask(1u << BLUE_LED_PIN);  // Toggle do LED // 1u = 1 unsigned
-        sleep_ms(1000);                 // período de 1000 ms (1Hz)
+    while (elapsed_time < total_time_ms) {
+        // Alterna o LED
+        gpio_xor_mask(1u << BLUE_LED_PIN);
+        sleep_ms(period);
+
+        // Atualiza o tempo decorrido
+        elapsed_time += period;
+
+        // Checa se um segundo inteiro passou
+        if (elapsed_time / 1000 > current_second) {
+            current_second = elapsed_time / 1000;
+            printf("Tempo decorrido: %d segundos\n", current_second);
+        }
+
+        // Se o botão B foi pressionado, muda a frequência para 1Hz
+        if (change_to_1hz) {
+            period = 1000; // 1Hz = 1000ms
+            change_to_1hz = false; // Reseta o estado
+        }
     }
+
+    // Apaga o LED após terminar
+    gpio_put(BLUE_LED_PIN, 0);
 }
 
 int main() {
@@ -90,25 +99,25 @@ int main() {
     gpio_set_dir(BLUE_LED_PIN, GPIO_OUT);
     gpio_put(BLUE_LED_PIN, 0); // LED inicialmente apagado
 
-    // Configura o pino do botão A como entrada com pull-up (ou pull-down) interno
+    // Configura o pino do botão A como entrada com pull-up interno
     gpio_init(BUTTON_A_PIN);
     gpio_set_dir(BUTTON_A_PIN, GPIO_IN);
     gpio_pull_up(BUTTON_A_PIN);
-    // Configura o pino do botão B como entrada com pull-up (ou pull-down) interno
+    // Configura o pino do botão B como entrada com pull-up interno
     gpio_init(BUTTON_B_PIN);
     gpio_set_dir(BUTTON_B_PIN, GPIO_IN);
     gpio_pull_up(BUTTON_B_PIN);
 
-    // Cria um timer repetitivo para verificar o botão a cada 10ms
+    // Cria um timer repetitivo para verificar os botões a cada 10ms
     repeating_timer_t timer_button;
     add_repeating_timer_ms(10, timer_callback_button_check, NULL, &timer_button);
 
     // Loop principal
-    while(true) {
-        // Se estiver no modo de piscar, executa o piscar por 10s e depois volta
-        if(led_A_blinking_mode) {
+    while (true) {
+        // Se estiver no modo de piscar, executa o piscar dinamicamente
+        if (led_A_blinking_mode) {
             printf("Iniciando piscar de 10s a 10Hz...\n");
-            blink_led_10s_10hz();
+            dynamic_blink_led_10s();
             printf("Fim do piscar.\n");
 
             // Desativa modo piscando, LED fica apagado e volta ao loop normal
@@ -116,16 +125,7 @@ int main() {
             led_A_blinking_mode = false;
         }
 
-        if(led_B_blinking_mode) {
-            printf("Iniciando piscar de 10s a 1Hz...\n");
-            blink_led_10s_1hz();
-            printf("Fim do piscar.\n");
-
-            // Desativa modo piscando, LED fica apagado e volta ao loop normal
-            gpio_put(BLUE_LED_PIN, 0);
-            led_B_blinking_mode = false;
-        }
-        sleep_ms(50); // pausa rápida para evitar loop muito rápido
+        sleep_ms(50); // Pausa rápida para evitar loop muito rápido
     }
 
     return 0;
