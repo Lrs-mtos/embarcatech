@@ -18,4 +18,10 @@ void configure_alarm();
 // Configura o ringtone
 void configure_ringtone();
 
+// Configura a iluminação
+void configure_lighting();
+
+// Faz o reset das configurações
+void reset_settings();
+
 #endif // MENU_H

@@ -5,33 +5,60 @@
 #include "menu.h"
 #include <stdbool.h>
 
+// Default settings
+
+#define DEFAULT_ALARM_HOUR 7
+#define DEFAULT_ALARM_MINUTE 0
+#define DEFAULT_RINGTONE 0
+#define DEFAULT_COLOR 0
+#define DEFAULT_BRIGHTNESS 0
+
+// To store user settings
+
+static int alarm_hour = DEFAULT_ALARM_HOUR;
+static int alarm_minute = DEFAULT_ALARM_MINUTE;
+static int ringtone = DEFAULT_RINGTONE;
+static int color = DEFAULT_COLOR;
+static int brightness = DEFAULT_BRIGHTNESS;
 
 const char *menu_options[] = {
-    "1 Alarme",
-    "2 Iluminacao",
+    "1 Alarm",
+    "2 Lighting",
     "3 Ringtone",
-    "4 Redefinir"
+    "4 Reset"
 };
 
 #define NUM_OPTIONS (sizeof(menu_options) / sizeof(menu_options[0]))
-
-const char *ringtone_options[] = {
-    "1 Iphone",
-    "2 Samsung",
-    "3 Nokia",
-    "4 Motorola"
-};
-
-#define NUM_RINGTONES (sizeof(ringtone_options) / sizeof(ringtone_options[0]))
-
-// Variável global para armazenar a seleção atual do ringtone
-static int selected_ringtone = 0; 
 // Variável global para rastrear o contexto atual
 static int menu_context = 0; // 0: Menu principal, 1: Configuração de alarme, etc.
 // Variável para rastrear a última opção desenhada
 static int last_selected_option = -1;
 // Variável para verificar se o display deve ser limpo
 static bool clear_display = false;
+
+const char *ringtone_options[] = {
+    "Iphone",
+    "Samsung",
+    "Nokia"
+};
+
+#define NUM_RINGTONES (sizeof(ringtone_options) / sizeof(ringtone_options[0]))
+// Variável global para armazenar a seleção atual do ringtone
+static int selected_ringtone = 0; 
+
+const char* color_options[] = {
+    "White ",
+    "Blue   ",
+    "Red    ",
+    "Yellow"
+};
+
+#define NUM_COLORS (sizeof(color_options) / sizeof(color_options[0]))
+// Variável para armazenar a cor selecionada
+static int selected_color = 0;
+
+
+
 
 
 /* 
@@ -144,24 +171,25 @@ void configure_ringtone() {
     printf("Configurando o ringtone...\n");
     oled_clear();
 
-    // Desenha linha separadora
-    oled_draw_line(0, 40, 120, 40);  
-    oled_display_text("Press A", 0, 50);
-
     while (1) {
+        
+
+        oled_display_text("Select Ringtone:", 0, 0);
 
         for (int i = 0; i < NUM_RINGTONES; i++) {
             if (i == selected_ringtone) {
-                oled_display_text(">", 0, (i * 10)); // Indica a opção selecionada
+                oled_display_text(">", 0, (i * 10) + 10); // Indica a opção selecionada
             }
-            oled_display_text(ringtone_options[i], 10, i * 10);
+            oled_display_text(ringtone_options[i], 10, (i * 10) + 10);
         }
 
         // Navegação com o joystick
         if (joystick_down()) {
             selected_ringtone = (selected_ringtone + 1) % NUM_RINGTONES;
+            oled_clear();  // Limpa a tela antes de redesenha
         } else if (joystick_up()) {
             selected_ringtone = (selected_ringtone - 1 + NUM_RINGTONES) % NUM_RINGTONES;
+            oled_clear();  // Limpa a tela antes de redesenha
         }
 
         // Confirma a seleção com o botão A
@@ -170,7 +198,8 @@ void configure_ringtone() {
             printf("Ringtone selecionado: %s\n", ringtone_options[selected_ringtone]);
             menu_context = 0; // Voltar ao menu principal
             oled_clear();
-            oled_display_text("Ringtone\nSelected", 0, 30);
+            oled_display_text("Ringtone\nSelected:", 0, 20);
+            oled_display_text(ringtone_options[selected_ringtone], 0, 40);
             sleep_ms(1000);
             oled_clear();
             draw_menu(-1);
@@ -192,6 +221,128 @@ void configure_ringtone() {
     }
 }
 
+
+void configure_lighting() {
+    printf("Configurando iluminação...\n");
+    oled_clear();
+
+    // Desenha linha separadora
+    oled_draw_line(0, 43, 120, 43);  
+    oled_display_text("Move Joystick", 0, 50);
+
+    while (1) {
+        oled_display_text("Adjust Lighting", 0, 0);
+
+        // Mostra a barra de brilho
+        char brightness_str[16];
+        snprintf(brightness_str, sizeof(brightness_str), "Brightness: %d%%", brightness);
+        oled_display_text(brightness_str, 0, 20);
+
+        // Mostra a cor selecionada
+        char color_str[16];
+        snprintf(color_str, sizeof(color_str), "Color: %s", color_options[selected_color]);
+        oled_display_text(color_str, 0, 30);
+
+        // Ajuste do brilho
+        if (joystick_up()) {
+            brightness = (brightness + 10 > 100) ? 100 : brightness + 10;
+        } else if (joystick_down()) {
+            brightness = (brightness - 10 < 0) ? 0 : brightness - 10;
+        }
+
+        // Troca de cor
+        if (joystick_right()) {
+            selected_color = (selected_color + 1) % NUM_COLORS;
+        } else if (joystick_left()) {
+            selected_color = (selected_color - 1 + NUM_COLORS) % NUM_COLORS;
+        }
+
+        // Confirma a seleção com o botão A
+        if (button_a_pressed()) {
+            sleep_ms(300);
+            printf("Iluminação ajustada: %d%%, Cor: %s\n", brightness, color_options[selected_color]);
+            menu_context = 0; // Voltar ao menu principal
+            oled_clear();
+
+            oled_display_text("Lighting:", 0, 10);
+            oled_display_text(color_options[selected_color], 75, 10);
+            oled_display_text(brightness_str, 0, 25);
+            sleep_ms(1500);
+            oled_clear();
+            draw_menu(-1);
+            clear_display = false;
+            break;
+        }
+
+        // Retorna ao menu principal com o botão B
+        if (button_b_pressed()) {
+            printf("Voltando ao menu principal sem alterar iluminação.\n");
+            menu_context = 0;
+            oled_clear();
+            draw_menu(-1);
+            clear_display = false;
+            break;
+        }
+
+        sleep_ms(200); // Delay para suavizar a navegação
+    }
+}
+
+void reset_settings() {
+    printf("Entrando no reset de configurações...\n");
+    oled_clear();
+
+    int confirm_selection = 0;  // 0 = No, 1 = Yes
+
+    while (1) {
+        oled_display_text("Reset Settings?", 10, 5);
+        oled_display_text("Yes", 30, 20);
+        oled_display_text("No", 30, 30);
+
+        // Show selection arrow
+        oled_display_text(confirm_selection == 0 ? ">" : " ", 20, 20);
+        oled_display_text(confirm_selection == 1 ? ">" : " ", 20, 30);
+
+        // Navigate options
+        if (joystick_down() || joystick_up()) {
+            confirm_selection = !confirm_selection; // Toggle selection
+        }
+
+        // Confirm selection
+        if (button_a_pressed()) {
+            if (confirm_selection == 0) { // Yes selected
+                // Reset all values to default
+                alarm_hour = DEFAULT_ALARM_HOUR;
+                alarm_minute = DEFAULT_ALARM_MINUTE;
+                selected_ringtone = DEFAULT_RINGTONE;
+                brightness = DEFAULT_BRIGHTNESS;
+                selected_color = DEFAULT_COLOR;
+
+                printf("Configurações resetadas para o padrão!\n");
+
+                oled_clear();
+                oled_display_text("Settings Reset!", 10, 20);
+                clear_display = false;
+                sleep_ms(1000);
+            }
+            break; // Exit reset menu
+        }
+
+        // Cancel and return to menu
+        if (button_b_pressed()) {
+            printf("Reset cancelado!\n");
+            clear_display = false;
+            break;
+        }
+
+        sleep_ms(200); // Smooth navigation
+    }
+
+    // Return to main menu
+    menu_context = 0;
+    oled_clear();
+    draw_menu(-1);
+}
 
 
 void menu_navigation() {
@@ -218,6 +369,8 @@ void menu_navigation() {
                         break;
                     case 1:
                         printf("Entrando na configuração de iluminação\n");
+                        menu_context = 2; // Define o contexto como submenu
+                        configure_lighting();
                         break;
                     case 2:
                         printf("Entrando na configuração de ringtone\n");
@@ -226,6 +379,8 @@ void menu_navigation() {
                         break;
                     case 3:
                         printf("Redefinindo configurações\n");
+                        menu_context = 2; // Define o contexto como submenu
+                        reset_settings();
                         break;
                 }
             }
