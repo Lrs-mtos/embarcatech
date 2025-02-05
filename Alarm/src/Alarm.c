@@ -8,7 +8,6 @@ int main() {
     stdio_init_all();  // Inicializa a comunicação UART
     oled_init();       // Inicializa o OLED
     joystick_init();   // Inicializa o joystick
-
     menu_navigation(); // Inicia a navegação no menu
 
     return 0;

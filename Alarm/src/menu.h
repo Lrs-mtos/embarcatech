@@ -15,4 +15,7 @@ void draw_menu(int selected_option);
 // Configura o alarme
 void configure_alarm();
 
+// Configura o ringtone
+void configure_ringtone();
+
 #endif // MENU_H
