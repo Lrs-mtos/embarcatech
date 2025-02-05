@@ -4,7 +4,6 @@
 #include "menu.h"
 #include "joystick.h" 
 #include "hardware/rtc.h"
-#include "pico/util/datetime.h"
 #include "hardware/gpio.h"
 #include "rtc.h"
 #include "buzzer.h"
@@ -25,6 +24,6 @@ int main() {
         menu_navigation(); // Keeps the menu running
         check_alarm();     // Check for alarm
         update_time_display(); // Update time display
-        //sleep_ms(1000); // Avoid CPU overload
+        sleep_ms(50); // Avoid CPU overload
     }
 }
