@@ -7,6 +7,7 @@
 #include "hardware/gpio.h"
 #include "rtc.h"
 #include "buzzer.h"
+#include "matrix.h"
 
 #define BUZZER_PIN 21  // Define the pin for the buzzer
 
@@ -16,6 +17,9 @@ int main() {
     joystick_init();
     rtc_init_custom();
     buzzer_init();  //Initialize buzzer
+    matrix_init();  // Initialize LED matrix
+
+    
 
     // Set initial RTC time
     rtc_set_time(2024, 2, 5, 12, 0, 0);
@@ -24,6 +28,6 @@ int main() {
         menu_navigation(); // Keeps the menu running
         check_alarm();     // Check for alarm
         update_time_display(); // Update time display
-        sleep_ms(50); // Avoid CPU overload
+        //sleep_ms(50); // Avoid CPU overload
     }
 }

@@ -150,6 +150,12 @@ inline int ssd1306_get_font(uint8_t character)
   else if (character == '<') {
     return 39;
   }
+  else if (character == '(') {
+    return 40;
+  }
+  else if (character == '(') {
+    return 41;
+  }
     return 0;
 }
 

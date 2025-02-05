@@ -7,16 +7,17 @@
 #include "hardware/rtc.h"
 #include "pico/util/datetime.h"
 #include "buzzer.h"
+#include "matrix.h"
 
 // Default settings
 #define BUZZER_PIN 21  // Change 10 to your actual buzzer GPIO pin
 
 
-#define DEFAULT_ALARM_HOUR 0
+#define DEFAULT_ALARM_HOUR 7
 #define DEFAULT_ALARM_MINUTE 0
 #define DEFAULT_RINGTONE 0
 #define DEFAULT_COLOR 0
-#define DEFAULT_BRIGHTNESS 0
+#define DEFAULT_BRIGHTNESS 10
 
 // To store user settings
 
@@ -53,10 +54,10 @@ const char *ringtone_options[] = {
 static int selected_ringtone = 0; 
 
 const char* color_options[] = {
-    "White ",
-    "Blue   ",
-    "Red    ",
-    "Yellow"
+    "White    ",
+    "Blue     ",
+    "Red      ",
+    "Yellow   "
 };
 
 #define NUM_COLORS (sizeof(color_options) / sizeof(color_options[0]))
@@ -100,7 +101,7 @@ void draw_menu(int selected_option) {
         oled_draw_line(0, 40, 120, 40);
         
         // Display "SEL A" and the RTC time
-        oled_display_text("SEL A ", 0, 50);
+        oled_display_text("SEL A", 0, 50);
 
         // Update the last selected option
         last_selected_option = selected_option;
@@ -132,7 +133,7 @@ void configure_alarm() {
 
     // Desenha linha separadora
     oled_draw_line(0, 40, 120, 40);  
-    oled_display_text("Press A ", 0, 50);
+    oled_display_text("SEL A", 0, 50);
 
 while (1) {
         char time_str[6];
@@ -212,6 +213,7 @@ if (alarm_set && now.hour == alarm_hour && now.min == alarm_minute) {
                 oled_display_text("Alarm Stopped", 10, 20);
                 sleep_ms(1000);
                 oled_clear();
+                clear_display = false;
                 draw_menu(-1);
                 alarm_set = false; // Disable alarm
                 break;
@@ -277,50 +279,80 @@ void configure_ringtone() {
 
 
 void configure_lighting() {
-    printf("Configurando iluminação...\n");
+    printf("Configuring Lighting...\n");
     oled_clear();
+    oled_draw_line(0, 43, 120, 43);
+    oled_display_text("SEL A", 0, 50);
 
-    // Desenha linha separadora
-    oled_draw_line(0, 43, 120, 43);  
-    oled_display_text("Move Joystick", 0, 50);
+    // Brilho lógico de 0..100 em passos de 10
+    uint8_t brightness_percent = 20; // Começa, p. ex., em 50%
+
+    // cor atual (índice). 0 = white, 1=blue, etc.
+    uint8_t selected_color = 0;
+
+    uint8_t color_values[][3] = {
+        {255, 255, 255}, // White
+        {0,   0,   255}, // Blue
+        {255, 0,   0},   // Red
+        {255, 255, 0}    // Yellow
+    };
+
+    // Aplica logo a cor default
+    matrix_set_color(color_values[selected_color][0],
+                     color_values[selected_color][1],
+                     color_values[selected_color][2]);
+
+    // Aplica brilho inicial
+    uint8_t real_brightness = (brightness_percent * 255) / 100;
+    matrix_set_brightness(real_brightness);
 
     while (1) {
         oled_display_text("Adjust Lighting", 0, 0);
 
-        // Mostra a barra de brilho
+        // Mostrar brilho
         char brightness_str[16];
-        snprintf(brightness_str, sizeof(brightness_str), "Brightness: %d%%", brightness);
+        snprintf(brightness_str, sizeof(brightness_str),
+                 "Brightness: %d%%", brightness_percent);
         oled_display_text(brightness_str, 0, 20);
 
-        // Mostra a cor selecionada
+        // Mostrar cor
         char color_str[16];
-        snprintf(color_str, sizeof(color_str), "Color: %s", color_options[selected_color]);
+        snprintf(color_str, sizeof(color_str),
+                 "Color: %s", color_options[selected_color]);
         oled_display_text(color_str, 0, 30);
 
-        // Ajuste do brilho
+        // Ajusta brilho (em passos de 10%)
         if (joystick_up()) {
-            brightness = (brightness + 10 > 100) ? 100 : brightness + 10;
+            brightness_percent = (brightness_percent >= 100) ? 100 : brightness_percent + 10;
+            real_brightness = (brightness_percent * 255) / 100;
+            matrix_set_brightness(real_brightness);
         } else if (joystick_down()) {
-            brightness = (brightness - 10 < 0) ? 0 : brightness - 10;
+            brightness_percent = (brightness_percent <= 0) ? 0 : brightness_percent - 10;
+            real_brightness = (brightness_percent * 255) / 100;
+            matrix_set_brightness(real_brightness);
         }
 
-        // Troca de cor
+        // Muda a cor
         if (joystick_right()) {
-            selected_color = (selected_color + 1) % NUM_COLORS;
+            selected_color = (selected_color + 1) % 4;
+            matrix_set_color(color_values[selected_color][0],
+                             color_values[selected_color][1],
+                             color_values[selected_color][2]);
         } else if (joystick_left()) {
-            selected_color = (selected_color - 1 + NUM_COLORS) % NUM_COLORS;
+            selected_color = (selected_color - 1 + 4) % 4;
+            matrix_set_color(color_values[selected_color][0],
+                             color_values[selected_color][1],
+                             color_values[selected_color][2]);
         }
 
-        // Confirma a seleção com o botão A
+        // Confirma config
         if (button_a_pressed()) {
             sleep_ms(300);
-            printf("Iluminação ajustada: %d%%, Cor: %s\n", brightness, color_options[selected_color]);
-            menu_context = 0; // Voltar ao menu principal
+            printf("Lighting adjusted: %d%%, Color: %s\n",
+                   brightness_percent, color_options[selected_color]);
+            menu_context = 0;
             oled_clear();
-
-            oled_display_text("Lighting:", 0, 10);
-            oled_display_text(color_options[selected_color], 75, 10);
-            oled_display_text(brightness_str, 0, 25);
+            oled_display_text("Lighting Set!", 10, 25);
             sleep_ms(1500);
             oled_clear();
             draw_menu(-1);
@@ -328,9 +360,10 @@ void configure_lighting() {
             break;
         }
 
-        // Retorna ao menu principal com o botão B
+        // Sai do menu
         if (button_b_pressed()) {
-            printf("Voltando ao menu principal sem alterar iluminação.\n");
+            printf("Exiting Lighting Settings.\n");
+            matrix_off(); // Desliga LED
             menu_context = 0;
             oled_clear();
             draw_menu(-1);
@@ -338,12 +371,14 @@ void configure_lighting() {
             break;
         }
 
-        sleep_ms(200); // Delay para suavizar a navegação
+        sleep_ms(200);
     }
 }
 
+
+
 void reset_settings() {
-    printf("Entrando no reset de configurações...\n");
+    printf("Resetting settings...\n");
     oled_clear();
 
     int confirm_selection = 0;  // 0 = No, 1 = Yes
@@ -364,27 +399,34 @@ void reset_settings() {
 
         // Confirm selection
         if (button_a_pressed()) {
-            if (confirm_selection == 0) { // Yes selected
+            if (confirm_selection == 0) { // "Yes" selected
                 // Reset all values to default
                 alarm_hour = DEFAULT_ALARM_HOUR;
                 alarm_minute = DEFAULT_ALARM_MINUTE;
                 selected_ringtone = DEFAULT_RINGTONE;
-                brightness = DEFAULT_BRIGHTNESS;
+                brightness = 0;  // Set brightness to 0
                 selected_color = DEFAULT_COLOR;
 
-                printf("Configurações resetadas para o padrão!\n");
+                // Apply brightness reset
+                matrix_set_brightness(0); // Turn off brightness
+                matrix_off(); // Turn off LEDs completely
+
+                printf("Settings reset to default!\n");
 
                 oled_clear();
                 oled_display_text("Settings Reset!", 10, 20);
-                clear_display = false;
                 sleep_ms(1000);
+                oled_clear();   
             }
+            clear_display = false;
             break; // Exit reset menu
         }
 
         // Cancel and return to menu
         if (button_b_pressed()) {
-            printf("Reset cancelado!\n");
+            printf("Reset canceled!\n");
+            sleep_ms(300);
+            oled_clear();   
             clear_display = false;
             break;
         }
@@ -394,9 +436,10 @@ void reset_settings() {
 
     // Return to main menu
     menu_context = 0;
-    oled_clear();
     draw_menu(-1);
+    clear_display = false;
 }
+
 
 
 void menu_navigation() {

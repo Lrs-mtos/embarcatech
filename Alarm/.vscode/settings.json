@@ -44,6 +44,8 @@
         "clocks.h": "c",
         "buzzer.h": "c",
         "stdio.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "rtc.h": "c",
+        "stdlib.h": "c"
     }
 }
