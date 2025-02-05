@@ -58,12 +58,15 @@ target_include_directories(Alarm PRIVATE
 
 # Add any user requested libraries
 target_link_libraries(Alarm 
+        pico_stdlib
         hardware_spi
         hardware_i2c
         hardware_dma
         hardware_pio
         hardware_timer
         hardware_adc
+        hardware_rtc
+        hardware_pwm
 )
 
 pico_add_extra_outputs(Alarm)

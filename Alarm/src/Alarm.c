@@ -3,12 +3,28 @@
 #include "oled.h"
 #include "menu.h"
 #include "joystick.h" 
+#include "hardware/rtc.h"
+#include "pico/util/datetime.h"
+#include "hardware/gpio.h"
+#include "rtc.h"
+#include "buzzer.h"
+
+#define BUZZER_PIN 21  // Define the pin for the buzzer
 
 int main() {
-    stdio_init_all();  // Inicializa a comunicação UART
-    oled_init();       // Inicializa o OLED
-    joystick_init();   // Inicializa o joystick
-    menu_navigation(); // Inicia a navegação no menu
+    stdio_init_all();
+    oled_init();
+    joystick_init();
+    rtc_init_custom();
+    buzzer_init();  //Initialize buzzer
 
-    return 0;
+    // Set initial RTC time
+    rtc_set_time(2024, 2, 5, 12, 0, 0);
+
+    while (1) {
+        menu_navigation(); // Keeps the menu running
+        check_alarm();     // Check for alarm
+        update_time_display(); // Update time display
+        //sleep_ms(1000); // Avoid CPU overload
+    }
 }

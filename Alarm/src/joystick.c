@@ -24,10 +24,12 @@ volatile bool button_b_flag = false;
 
 void gpio_callback(uint gpio, uint32_t events) {
     if (gpio == BUTTON_A_PIN) {
+        sleep_ms(50); // Debounce
         button_a_flag = true;
         printf("Botão A pressionado (IRQ)\n");
     }
     if (gpio == BUTTON_B_PIN) {
+        sleep_ms(50); // Debounce
         button_b_flag = true;
         printf("Botão B pressionado (IRQ)\n");
     }

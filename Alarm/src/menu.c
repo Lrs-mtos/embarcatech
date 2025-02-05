@@ -4,10 +4,15 @@
 #include "pico/stdlib.h"  // Necessário para sleep_ms
 #include "menu.h"
 #include <stdbool.h>
+#include "hardware/rtc.h"
+#include "pico/util/datetime.h"
+#include "buzzer.h"
 
 // Default settings
+#define BUZZER_PIN 21  // Change 10 to your actual buzzer GPIO pin
 
-#define DEFAULT_ALARM_HOUR 7
+
+#define DEFAULT_ALARM_HOUR 0
 #define DEFAULT_ALARM_MINUTE 0
 #define DEFAULT_RINGTONE 0
 #define DEFAULT_COLOR 0
@@ -17,6 +22,7 @@
 
 static int alarm_hour = DEFAULT_ALARM_HOUR;
 static int alarm_minute = DEFAULT_ALARM_MINUTE;
+static int alarm_second = 0;
 static int ringtone = DEFAULT_RINGTONE;
 static int color = DEFAULT_COLOR;
 static int brightness = DEFAULT_BRIGHTNESS;
@@ -57,9 +63,8 @@ const char* color_options[] = {
 // Variável para armazenar a cor selecionada
 static int selected_color = 0;
 
-
-
-
+// Alarm state (true = active, false = inactive)
+static bool alarm_set = false;
 
 /* 
 Função para desenhar o menu principal
@@ -68,27 +73,50 @@ Nessa função é feita a lógica de desenho do menu principal.
 void draw_menu(int selected_option) {
     if (selected_option != last_selected_option) { 
 
-        // Limpa o display somente ao mudar a seleção
+        // Clear display only when changing selection
         if(clear_display){
             oled_clear();
         }   
         clear_display = true;
 
-        // Desenha o menu com a nova seleção
+        // Fetch the current RTC time
+        datetime_t now;
+        rtc_get_datetime(&now);
+
+        // Format the RTC time as HH:MM:SS
+        char current_time[10];
+        snprintf(current_time, sizeof(current_time), "%02d:%02d:%02d", now.hour, now.min, now.sec);
+
+        // Draw the menu options
         for (int i = 0; i < NUM_OPTIONS; i++) {
             if (i == selected_option) {
-                oled_display_text(">", 0, i * 10); // Mostra seta na seleção
+                oled_display_text(">", 0, i * 10); // Show selection arrow
             }
             oled_display_text(menu_options[i], 10, i * 10);
+            oled_display_text(current_time, 50, 50);  // Show current RTC time
         }
         
-        // Desenha linha separadora
-        oled_draw_line(0, 40, 120, 40);  
-        oled_display_text("Press A ", 0, 50);
+        // Draw separator line
+        oled_draw_line(0, 40, 120, 40);
+        
+        // Display "SEL A" and the RTC time
+        oled_display_text("SEL A ", 0, 50);
 
-        // Atualiza a variável de rastreamento
+        // Update the last selected option
         last_selected_option = selected_option;
     }
+}
+
+void update_time_display() {
+    datetime_t now;
+    rtc_get_datetime(&now);  // Fetch real-time clock
+
+    // Format RTC time as HH:MM:SS
+    char current_time[10];
+    snprintf(current_time, sizeof(current_time), "%02d:%02d:%02d", now.hour, now.min, now.sec);
+
+    // Display only the updated time without redrawing the entire menu
+    oled_display_text(current_time, 50, 50);
 }
 
 
@@ -106,43 +134,37 @@ void configure_alarm() {
     oled_draw_line(0, 40, 120, 40);  
     oled_display_text("Press A ", 0, 50);
 
-    while (1) {
-        // Mostra o horário atual
-        
+while (1) {
         char time_str[6];
-        snprintf(time_str, sizeof(time_str), "%02d:%02d", hours, minutes);
-        oled_display_text("Configure Alarme", 0, 0);
+        snprintf(time_str, sizeof(time_str), "%02d:%02d", alarm_hour, alarm_minute);
+        oled_display_text("Set Alarm:", 10, 5);
         oled_display_text(time_str, 30, 20);
+        oled_display_text(editing_hours ? "^" : " ", 35, 35);
+        oled_display_text(!editing_hours ? "^" : " ", 75, 35);
 
-        if (editing_hours) {
-            oled_display_text("^", 35, 35); // Indica que está editando horas
-        } else {
-            oled_display_text("^", 75, 35); // Indica que está editando minutos
-        }
-
-        // Verifica movimento do joystick
         if (joystick_up()) {
             if (editing_hours) {
-                hours = (hours + 1) % 24; // Incrementa as horas, máximo 23
+                alarm_hour = (alarm_hour + 1) % 24;
             } else {
-                minutes = (minutes + 1) % 60; // Incrementa os minutos, máximo 59
+                alarm_minute = (alarm_minute + 1) % 60;
             }
         } else if (joystick_down()) {
             if (editing_hours) {
-                hours = (hours - 1 + 24) % 24; // Decrementa as horas
+                alarm_hour = (alarm_hour - 1 + 24) % 24;
             } else {
-                minutes = (minutes - 1 + 60) % 60; // Decrementa os minutos
+                alarm_minute = (alarm_minute - 1 + 60) % 60;
             }
         } else if (joystick_left()) {
-            editing_hours = true; // Alterna para edição das horas
+            editing_hours = true;
         } else if (joystick_right()) {
-            editing_hours = false; // Alterna para edição dos minutos
+            editing_hours = false;
         }
 
         // Verifica botões A e B
         if (button_a_pressed()) {
+            alarm_set = true; // Ativa o alarme
             sleep_ms(300); // Delay para evitar múltiplos pressionamentos
-            printf("Alarme configurado para %02d:%02d\n", hours, minutes);
+            printf("Alarme configurado para %02d:%02d\n", alarm_hour, alarm_minute);
             ///////////////////////passar esse dado para ma string para passar pro display_text:
             menu_context = 0; // Volta para o menu principal
             oled_clear();
@@ -163,6 +185,38 @@ void configure_alarm() {
         }
 
         sleep_ms(200); // Evita múltiplos comandos rápidos
+    }
+}
+
+void check_alarm() {
+    if (!alarm_set) return; // Only check if an alarm is set
+
+    datetime_t now;
+    rtc_get_datetime(&now);
+
+if (alarm_set && now.hour == alarm_hour && now.min == alarm_minute) {
+        printf("ALARM TRIGGERED at %02d:%02d!\n", now.hour, now.min);
+
+        oled_clear();
+        oled_display_text("ALARM!!!", 30, 20);
+        oled_display_text("Press B to Stop", 10, 40);
+
+        // Play selected ringtone
+        while (1) {
+            play_ringtone(selected_ringtone);
+
+            if (button_b_pressed()) {
+                stop_buzzer(); // Stop ringtone
+                printf("Alarm Stopped\n");
+                oled_clear();
+                oled_display_text("Alarm Stopped", 10, 20);
+                sleep_ms(1000);
+                oled_clear();
+                draw_menu(-1);
+                alarm_set = false; // Disable alarm
+                break;
+            }
+        }
     }
 }
 
@@ -346,55 +400,49 @@ void reset_settings() {
 
 
 void menu_navigation() {
-    int selected_option = 0;
-    printf("Navegando no menu...\n");
-    while (1) {
+    static int selected_option = 0;
+    //while(1){
         if (menu_context == 0) { // Menu principal
             draw_menu(selected_option);
 
             if (joystick_down()) {
-                selected_option = (selected_option + 1) % NUM_OPTIONS; // Próxima opção
+                selected_option = (selected_option + 1) % NUM_OPTIONS;
                 printf("Selecionado: %s\n", menu_options[selected_option]);
             } else if (joystick_up()) {
-                selected_option = (selected_option - 1 + NUM_OPTIONS) % NUM_OPTIONS; // Opção anterior
+                selected_option = (selected_option - 1 + NUM_OPTIONS) % NUM_OPTIONS;
                 printf("Selecionado: %s\n", menu_options[selected_option]);
             } else if (button_a_pressed()) {
                 printf("Selecionado: %s\n", menu_options[selected_option]);
-                
+
                 switch (selected_option) {
                     case 0: // Configuração do alarme
                         printf("Entrando na configuração do alarme\n");
-                        menu_context = 1; // Define o contexto como submenu
+                        menu_context = 1;
                         configure_alarm();
                         break;
                     case 1:
                         printf("Entrando na configuração de iluminação\n");
-                        menu_context = 2; // Define o contexto como submenu
+                        menu_context = 2;
                         configure_lighting();
                         break;
                     case 2:
                         printf("Entrando na configuração de ringtone\n");
-                        menu_context = 2; // Define o contexto como submenu
+                        menu_context = 2;
                         configure_ringtone();
                         break;
                     case 3:
                         printf("Redefinindo configurações\n");
-                        menu_context = 2; // Define o contexto como submenu
+                        menu_context = 2;
                         reset_settings();
                         break;
                 }
             }
 
-            // Ignorar o botão B no menu principal
             if (button_b_pressed()) {
                 printf("Botão B ignorado no menu principal\n");
             }
-
-        } else {
-            // Se estiver em outro submenu, o comportamento é gerenciado lá
         }
-
-        sleep_ms(200); // Delay para suavizar a navegação
-    }
+    //}
 }
+
 

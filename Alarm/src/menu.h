@@ -24,4 +24,10 @@ void configure_lighting();
 // Faz o reset das configurações
 void reset_settings();
 
+// Checa alarme
+void check_alarm();
+
+// Atualiza o display com o horário
+void update_time_display();
+
 #endif // MENU_H
