@@ -40,12 +40,6 @@
         "*.sqlbook": "sql",
         "*.ndjson": "jsonl",
         "*.dbclient-js": "javascript",
-        "datetime.h": "c",
-        "clocks.h": "c",
-        "buzzer.h": "c",
-        "stdio.h": "c",
-        "stdbool.h": "c",
-        "rtc.h": "c",
-        "stdlib.h": "c"
+        "rtc.h": "c"
     }
 }

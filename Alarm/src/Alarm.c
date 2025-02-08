@@ -18,11 +18,10 @@ int main() {
     rtc_init_custom();
     buzzer_init();  //Initialize buzzer
     matrix_init();  // Initialize LED matrix
-
     
 
     // Set initial RTC time
-    rtc_set_time(2024, 2, 5, 12, 0, 0);
+    rtc_set_time(2024, 2, 5, 12, 0, 30);
 
     while (1) {
         menu_navigation(); // Keeps the menu running

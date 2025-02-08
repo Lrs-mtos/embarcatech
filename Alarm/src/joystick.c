@@ -18,21 +18,37 @@
 #define BUTTON_A_PIN 5
 #define BUTTON_B_PIN 6
 
+// Debounce time (milliseconds)
+#define DEBOUNCE_TIME_MS 250
+
 // Flags de botão pressionado
 volatile bool button_a_flag = false;
 volatile bool button_b_flag = false;
 
+// Last time each button was pressed
+volatile uint32_t last_press_a = 0;
+volatile uint32_t last_press_b = 0;
+
+// Interrupt handler for button presses
 void gpio_callback(uint gpio, uint32_t events) {
+    uint32_t now = time_us_32() / 1000; // Get current time in ms
+
     if (gpio == BUTTON_A_PIN) {
-        button_a_flag = true;
-        printf("Botão A pressionado (IRQ)\n");
+        if (now - last_press_a > DEBOUNCE_TIME_MS) { // Debounce check
+            last_press_a = now;
+            button_a_flag = true;
+            printf("Botão A pressionado (IRQ)\n");
+        }
     }
+
     if (gpio == BUTTON_B_PIN) {
-        button_b_flag = true;
-        printf("Botão B pressionado (IRQ)\n");
+        if (now - last_press_b > DEBOUNCE_TIME_MS) { // Debounce check
+            last_press_b = now;
+            button_b_flag = true;
+            printf("Botão B pressionado (IRQ)\n");
+        }
     }
 }
-
 
 void joystick_init(void) {
     sleep_ms(500);
@@ -60,37 +76,33 @@ void joystick_init(void) {
 
 // Funções para verificar os estados do joystick
 bool joystick_left(void) {
-    adc_select_input(1); // Agora para o eixo X
+    adc_select_input(1);
     uint16_t value = adc_read();
-    //printf("Valor do joystick_left: %d\n", value);
     return value < JOYSTICK_THRESHOLD_LEFT;
 }
 
 bool joystick_right(void) {
-    adc_select_input(1); // Agora para o eixo X
+    adc_select_input(1);
     uint16_t value = adc_read();
-    //printf("Valor do joystick_right: %d\n", value);
     return value > JOYSTICK_THRESHOLD_RIGHT;
 }
 
 bool joystick_up(void) {
-    adc_select_input(0); // Agora para o eixo Y
+    adc_select_input(0);
     uint16_t value = adc_read();
-    //printf("Valor do joystick_up: %d\n", value);
     return value > JOYSTICK_THRESHOLD_UP;
 }
 
 bool joystick_down(void) {
-    adc_select_input(0); // Agora para o eixo Y
+    adc_select_input(0);
     uint16_t value = adc_read();
-    //printf("Valor do joystick_down: %d\n", value);
     return value < JOYSTICK_THRESHOLD_DOWN; 
 }
 
 // Funções para verificar os estados dos botões
 bool button_a_pressed(void) {
     if (button_a_flag) {
-        button_a_flag = false; // Limpa a flag
+        button_a_flag = false;
         return true;
     }
     return false;
@@ -98,7 +110,7 @@ bool button_a_pressed(void) {
 
 bool button_b_pressed(void) {
     if (button_b_flag) {
-        button_b_flag = false; // Limpa a flag
+        button_b_flag = false;
         return true;
     }
     return false;
