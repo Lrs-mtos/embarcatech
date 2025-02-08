@@ -114,69 +114,86 @@ void update_time_display() {
 lógica que seleciona as horas e minutos do alarme. */
 
 void configure_alarm() {
-    printf("Configurando o alarme...\n");
-    int hours = 0;
-    int minutes = 0;
-    bool editing_hours = true; // Define se está editando horas ou minutos
+    printf("Configuring alarm...\n");
+    int hours = alarm_hour;
+    int minutes = alarm_minute;
+    bool editing_hours = true; // Track what the user is editing
     oled_clear();
 
-    // Desenha linha separadora
-    oled_draw_line(0, 40, 120, 40);  
+    oled_draw_line(0, 40, 120, 40);
     oled_display_text("SEL A", 0, 50);
 
-while (1) {
+    while (1) {
         char time_str[6];
-        snprintf(time_str, sizeof(time_str), "%02d:%02d", alarm_hour, alarm_minute);
+        snprintf(time_str, sizeof(time_str), "%02d:%02d", hours, minutes);
         oled_display_text("Set Alarm:", 10, 5);
         oled_display_text(time_str, 30, 20);
-        oled_display_text(editing_hours ? "^" : " ", 35, 35);
-        oled_display_text(!editing_hours ? "^" : " ", 75, 35);
 
+        // Blinking underscore
+        static bool show_underscore = true;
+        if (show_underscore) {
+            if (editing_hours) {
+                oled_display_text("__", 30, 30);  // Underscore below hours
+            } else {
+                oled_display_text("__", 53, 30);  // Underscore below minutes
+            }
+        }
+        show_underscore = !show_underscore; // Toggle blinking effect
+
+        // Adjust time selection
         if (joystick_up()) {
             if (editing_hours) {
-                alarm_hour = (alarm_hour + 1) % 24;
+                hours = (hours + 1) % 24;
             } else {
-                alarm_minute = (alarm_minute + 1) % 60;
+                minutes = (minutes + 1) % 60;
             }
         } else if (joystick_down()) {
             if (editing_hours) {
-                alarm_hour = (alarm_hour - 1 + 24) % 24;
+                hours = (hours - 1 + 24) % 24;
             } else {
-                alarm_minute = (alarm_minute - 1 + 60) % 60;
+                minutes = (minutes - 1 + 60) % 60;
             }
         } else if (joystick_left()) {
             editing_hours = true;
+            oled_display_text("__", 30, 30);  // Underscore below hours
+            oled_display_text("  ", 53, 30);  // Underscore below minutes
         } else if (joystick_right()) {
+            oled_display_text("  ", 30, 30);  // Underscore below hours
+            oled_display_text("__", 53, 30);  // Underscore below minutes
             editing_hours = false;
         }
 
-        // Verifica botões A e B
+        // Confirm with Button A
         if (button_a_pressed()) {
-            alarm_set = true; // Ativa o alarme
-            sleep_ms(300); // Delay para evitar múltiplos pressionamentos
-            printf("Alarme configurado para %02d:%02d\n", alarm_hour, alarm_minute);
-            ///////////////////////passar esse dado para ma string para passar pro display_text:
-            menu_context = 0; // Volta para o menu principal
+            alarm_set = true;
+            alarm_hour = hours;
+            alarm_minute = minutes;
+            sleep_ms(300);
+            printf("Alarm set for %02d:%02d\n", alarm_hour, alarm_minute);
+            menu_context = 0;
             oled_clear();
-            oled_display_text("Alarme\nconfigurado", 0, 25);
+            oled_display_text("Alarm Set!", 10, 25);
             sleep_ms(1000);
             oled_clear();
             draw_menu(-1);
             clear_display = false;
-            // Aqui você pode salvar o horário do alarme em uma variável global ou memória
-            break; // Sai do menu de configuração
-        } else if (button_b_pressed()) {
-            printf("Voltando ao menu principal sem configurar o alarme\n");
-            menu_context = 0; // Volta para o menu principal
+            break;
+        }
+
+        // Cancel with Button B
+        if (button_b_pressed()) {
+            printf("Exiting alarm setup.\n");
+            menu_context = 0;
             oled_clear();
             draw_menu(-1);
             clear_display = false;
-            break; // Volta ao menu principal sem salvar
+            break;
         }
 
-        sleep_ms(200); // Evita múltiplos comandos rápidos
+        sleep_ms(300); // Controls blink speed and smooth navigation
     }
 }
+
 
 void check_alarm() {
     if (!alarm_set) return;

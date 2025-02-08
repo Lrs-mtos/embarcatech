@@ -156,6 +156,9 @@ inline int ssd1306_get_font(uint8_t character)
   else if (character == '(') {
     return 41;
   }
+  else if (character == '_') {
+    return 42;
+  }else
     return 0;
 }
 
