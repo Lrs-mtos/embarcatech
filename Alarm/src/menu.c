@@ -42,9 +42,9 @@ static int last_selected_option = -1;
 static bool clear_display = false;
 
 const char *ringtone_options[] = {
-    "Ringtone1",
-    "Ringtone2",
-    "Ringtone3"
+    "1 Simple",
+    "2 Tones",
+    "3 Star"
 };
 
 #define NUM_RINGTONES (sizeof(ringtone_options) / sizeof(ringtone_options[0]))
@@ -84,6 +84,12 @@ void draw_menu(int selected_option) {
             }
             oled_display_text(menu_options[i], 10, i * 10);
             oled_display_text(current_time, 50, 50);  // Show current RTC time
+        }
+
+        if(alarm_set){
+            oled_display_text("(V)", 73, 0);
+        }else{
+            oled_display_text("   ", 73, 0);
         }
         
         // Draw separator line
@@ -201,12 +207,12 @@ void check_alarm() {
     datetime_t now;
     rtc_get_datetime(&now);
 
-    if (alarm_set && now.hour == alarm_hour && now.min == alarm_minute) {
+    if (alarm_set && now.hour == alarm_hour && now.min == alarm_minute && now.sec == 0) {
         printf("ALARM TRIGGERED at %02d:%02d!\n", now.hour, now.min);
 
         oled_clear();
         oled_display_text("ALARM!!!", 30, 20);
-        oled_display_text("Press B to Stop", 10, 40);
+        oled_display_text("Sel B to Stop", 10, 40);
 
         int blink_count = 0;
 
@@ -416,9 +422,14 @@ void reset_settings() {
                 oled_display_text("Settings Reset!", 10, 20);
                 sleep_ms(1000);
                 oled_clear();
+                clear_display = false;
+                break;
+                
+            } else{
+                clear_display = true;
+                break;
             }
-            clear_display = false;
-            break;
+            
         }
 
         if (button_b_pressed()) {

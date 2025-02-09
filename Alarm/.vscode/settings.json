@@ -40,6 +40,9 @@
         "*.sqlbook": "sql",
         "*.ndjson": "jsonl",
         "*.dbclient-js": "javascript",
-        "rtc.h": "c"
+        "rtc.h": "c",
+        "wifi_time.h": "c",
+        "ssd1306_font.h": "c",
+        "ssd1306_i2c.h": "c"
     }
 }

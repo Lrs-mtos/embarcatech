@@ -32,7 +32,7 @@ project(Alarm C CXX ASM)
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
-file(GLOB SOURCES "src/*.c" "src/inc/*.c")
+file(GLOB SOURCES "src/*.c" "src/inc/*.c" "src/cyw43/*.c")
 add_executable(Alarm ${SOURCES})
 
 pico_set_program_name(Alarm "Alarm")
@@ -44,10 +44,6 @@ pico_generate_pio_header(Alarm ${CMAKE_CURRENT_LIST_DIR}/blink.pio)
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(Alarm 0)
 pico_enable_stdio_usb(Alarm 1)
-
-# Add the standard library to the build
-target_link_libraries(Alarm
-        pico_stdlib)
 
 # Add the standard include files to the build
 target_include_directories(Alarm PRIVATE
@@ -67,6 +63,7 @@ target_link_libraries(Alarm
         hardware_adc
         hardware_rtc
         hardware_pwm
+        pico_cyw43_arch_lwip_threadsafe_background
 )
 
 pico_add_extra_outputs(Alarm)
