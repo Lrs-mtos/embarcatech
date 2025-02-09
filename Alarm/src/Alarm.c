@@ -22,16 +22,6 @@ int main() {
     matrix_init();  // Initialize LED matrix
     wifi_time_init();  // Initialize WiFi and fetch time
     oled_clear();
-    
-    
-    // Variables for NTP time
-    //int year, month, day, hour, minute, second;
-    
-    // Fetch NTP time with full date
-    //fetch_ntp_time(&year, &month, &day, &hour, &minute, &second);
-    
-    // Set RTC with full date & time
-    //rtc_set_time(year, month, day, hour, minute, second);
     rtc_set_time(0, 0, 0, 0, 0, 0);
     
     while (1) {

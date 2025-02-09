@@ -3,16 +3,16 @@
 
 #include <stdbool.h>
 
-// Inicializa o joystick e os botões
+// Initialize joystick and buttons
 void joystick_init(void);
 
-// Funções para verificar a direção do joystick
+// Joystick movement detection
 bool joystick_left(void);
 bool joystick_right(void);
 bool joystick_up(void);
 bool joystick_down(void);
 
-// Funções para verificar os botões A e B
+// Button press detection
 bool button_a_pressed(void);
 bool button_b_pressed(void);
 

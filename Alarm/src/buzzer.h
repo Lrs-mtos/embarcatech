@@ -3,7 +3,7 @@
 
 #include "pico/stdlib.h"
 
-// Define the buzzer pin
+// Buzzer pin definition
 #define BUZZER_PIN 21
 
 // Function prototypes
