@@ -13,8 +13,8 @@
 #include "wifi_time.h"
 #include "rtc.h"
 
-#define WIFI_SSID "brisa-805138"
-#define WIFI_PASS "ysy7x2yi"
+#define WIFI_SSID "NOME_DA_REDE_WIFI"
+#define WIFI_PASS "SENHA_DA_REDE_WIFI"
 
 #define NTP_SERVER "pool.ntp.org"
 #define NTP_PORT 123
