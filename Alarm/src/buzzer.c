@@ -3,6 +3,8 @@
 #include "hardware/clocks.h"
 #include <stdio.h>
 
+#define BUZZER_PIN 21  // Define the pin for the buzzer
+
 // Ringtones
 static const uint ringtone1[] = {262, 294, 330, 349, 392, 440, 494, 523}; // Simple scale
 static const uint ringtone2[] = {659, 698, 784, 880, 988}; // Higher tones

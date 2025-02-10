@@ -10,8 +10,6 @@
 #include "matrix.h"
 #include "wifi_time.h"
 
-#define BUZZER_PIN 21  // Define the pin for the buzzer
-
 int main() {
     stdio_init_all();
     oled_init();
